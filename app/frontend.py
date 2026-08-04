@@ -1,7 +1,10 @@
 import streamlit as st
-from langgraph_backend import chatbot, retrieve_all_threads
+from backend import chatbot, retrieve_all_threads
 from langchain_core.messages import HumanMessage, AIMessage, ToolMessage
 import uuid
+
+# ======================= Page Configaration =======================
+st.set_page_config(page_title="OmniRAG")
 
 # =========================== Utilities ===========================
 def generate_thread_id():
@@ -35,7 +38,7 @@ if "chat_threads" not in st.session_state:
 add_thread(st.session_state["thread_id"])
 
 # ============================ Sidebar ============================
-st.sidebar.title("LangGraph Chatbot")
+st.sidebar.title("OmniRAG")
 
 if st.sidebar.button("New Chat"):
     reset_chat()
