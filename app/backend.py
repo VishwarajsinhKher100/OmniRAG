@@ -1,11 +1,10 @@
 from langgraph.graph import StateGraph, START, END
 from typing import TypedDict, Annotated
 from langchain_core.messages import BaseMessage
-from langchain.chat_models import init_chat_model
+from langchain_groq import ChatGroq
 from langgraph.graph.message import add_messages
 from langgraph.checkpoint.sqlite import SqliteSaver
 from langgraph.prebuilt import ToolNode, tools_condition
-from langchain_community.tools import DuckDuckGoSearchRun
 from langchain_core.tools import tool
 from dotenv import load_dotenv
 import sqlite3
@@ -14,11 +13,9 @@ import requests
 load_dotenv()
 
 # model
-model = init_chat_model("groq:llama-3.1-8b-instant")
+model = ChatGroq("llama-3.1-8b-instant")
 
 # tool
-search_tool = DuckDuckGoSearchRun(region="us-en")
-
 @tool
 def calculator(first_num: float, second_num: float, operation: str) -> dict:
     """
