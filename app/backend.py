@@ -80,7 +80,7 @@ def get_stock_price(symbol: str) -> dict:
     r = requests.get(url)
     return r.json()
 
-tools = [search_tool, get_stock_price, calculator, weather]
+tools = [get_stock_price, calculator, weather]
 model_with_tools = model.bind_tools(tools)
 
 # state
