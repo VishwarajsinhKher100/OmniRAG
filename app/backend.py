@@ -13,7 +13,7 @@ import requests
 load_dotenv()
 
 # model
-model = ChatGroq("llama-3.1-8b-instant")
+model = ChatGroq(model="llama-3.1-8b-instant")
 
 # tool
 @tool
