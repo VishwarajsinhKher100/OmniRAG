@@ -5,20 +5,20 @@ import sqlite3
 import tempfile
 from typing import Annotated, Any, Dict, Optional, TypedDict
 
+import requests
 from dotenv import load_dotenv
-from langchain_text_splitters import RecursiveCharacterTextSplitter
 from langchain_community.document_loaders import PyPDFLoader
 from langchain_community.tools import DuckDuckGoSearchRun
-from langchain_community.vectorstores import FAISS
+from langchain_chroma import Chroma
 from langchain_core.messages import BaseMessage, SystemMessage
 from langchain_core.tools import tool
 from langchain_groq import ChatGroq
-from sentence_transformers import SentenceTransformer
+from langchain_huggingface import HuggingFaceEmbeddings
+from langchain_text_splitters import RecursiveCharacterTextSplitter
 from langgraph.checkpoint.sqlite import SqliteSaver
 from langgraph.graph import START, StateGraph
 from langgraph.graph.message import add_messages
 from langgraph.prebuilt import ToolNode, tools_condition
-import requests
 
 load_dotenv()
 
@@ -26,7 +26,7 @@ load_dotenv()
 # 1. LLM + embeddings
 # -------------------
 llm = ChatGroq(model="openai/gpt-oss-120b")
-embeddings = SentenceTransformer("sentence-transformers/all-MiniLM-L6-v2")
+embeddings = HuggingFaceEmbeddings(model_name="all-MiniLM-L6-v2")
 
 # -------------------
 # 2. PDF retriever store (per thread)
@@ -44,7 +44,7 @@ def _get_retriever(thread_id: Optional[str]):
 
 def ingest_pdf(file_bytes: bytes, thread_id: str, filename: Optional[str] = None) -> dict:
     """
-    Build a FAISS retriever for the uploaded PDF and store it for the thread.
+    Build a Chroma retriever for the uploaded PDF and store it for the thread.
 
     Returns a summary dict that can be surfaced in the UI.
     """
@@ -64,7 +64,11 @@ def ingest_pdf(file_bytes: bytes, thread_id: str, filename: Optional[str] = None
         )
         chunks = splitter.split_documents(docs)
 
-        vector_store = FAISS.from_documents(chunks, embeddings)
+        vector_store = Chroma.from_documents(
+            documents=chunks,
+            embedding=embeddings,
+            collection_name=f"thread_{thread_id}",
+        )
         retriever = vector_store.as_retriever(
             search_type="similarity", search_kwargs={"k": 4}
         )
@@ -82,7 +86,7 @@ def ingest_pdf(file_bytes: bytes, thread_id: str, filename: Optional[str] = None
             "chunks": len(chunks),
         }
     finally:
-        # The FAISS store keeps copies of the text, so the temp file is safe to remove.
+        # The vector store keeps copies of the text, so the temp file is safe to remove.
         try:
             os.remove(temp_path)
         except OSError:
