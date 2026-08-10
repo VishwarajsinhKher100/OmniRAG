@@ -1,53 +1,67 @@
-# Conversational Chatbot
+# **OmniRAG** : Multi-Utility Agentic RAG Chatbot
 
-An advanced conversational AI assistant that remembers past interactions and leverages integrated tools to accomplish complex tasks. Similar to ChatGPT, it maintains continuous context for natural, multi-turn dialogue while seamlessly executing external functions to deliver dynamic, action-oriented responses.
+An intelligent, stateful assistant built with **LangGraph**, **Groq** (openai/gpt-oss-120b), **ChromaDB**, and **Streamlit**. The system provides multi-thread PDF Retrieval-Augmented Generation (RAG) alongside autonomous tools for web search, real-time stock quotes, and basic calculations.
 
-# Features
+## **Features**
 
-* ChatGPT-Style Interface: A clean, intuitive frontend designed for seamless, multi-turn natural language interactions.
+* **Thread-Isolated PDF RAG**: Upload PDFs bound strictly to active conversation thread IDs using isolated ChromaDB collections.
 
-* Real-Time Streaming: Responses stream back to the UI token-by-token as they are generated, ensuring a fast, responsive user experience without long loading times.
+* **Autonomous Tool Calling**: Automatically delegates tasks to web search, Alpha Vantage stock price API, arithmetic calculator, or document search depending on context.
 
-* Session Persistence & Resume: Chat history is continuously saved. Users can exit the application, return later, and pick up past conversations exactly where they left off with full context intact.
+* **Persistent Conversation Memory**: SQLite checkpointer handles conversation persistence across reloads.
 
-* Integrated Action Tools: The bot extends beyond standard text generation by intelligently calling external functions when needed:
+* **Interactive Streamlit UI**: Complete user interface with sidebar thread management, PDF uploading, and real-time streaming tool status indicators.
 
-    * Web Search: Fetches up-to-date information from the internet.
+## **Tech Stack**
 
-    * Live Weather: Retrieves current conditions and forecasts for any location.
 
-    * Stock Tracker: Pulls real-time market prices.
+| Component            | Technology                      |
+|----------------------|---------------------------------|
+| Frontend             | Streamlit                       |
+| Agent Framework      | LangGraph & LangChain           |
+| LLM Provider         | Groq (openai/gpt-oss-120b)      |
+| Vector DB            | ChromaDB (langchain-chroma)     |
+| Embedding Model      | HuggingFace (all-MiniLM-L6-v2)  |
+| State Persistence    | SQLite (SqliteSaver)            |
 
-    * Calculator: Performs precise mathematical operations directly within the chat.
+## **Setup Instructions**
 
-* SQLite Storage: Uses a lightweight, zero-configuration SQLite database to reliably manage user sessions, messages, and state.
+### 1. Clone the Repository
+```bash
+git clone https://github.com/VishwarajsinhKher100/OmniRAG.git
+```
 
-* Observability & Tracing: Built-in logging and monitoring capabilities to trace tool executions, track latency, and easily debug conversation routing.
+### 2. Set Up Virtual Environment
+```bash
+uv venv
+```
 
-# Tech Stack
+#### Activate the virtual environment:
 
-Core Language & UI
+```bash
+.venv\Scripts\activate     # On Windows
+# OR
+source .venv/bin/activate  # On Linux/macOS:
+```
 
-* Python: The primary programming language used for the backend logic and tool execution.
+### 3. Install Dependencies
 
-* Streamlit: Powers the ChatGPT-like frontend, enabling a responsive, real-time chat interface without writing complex HTML/CSS.
+```bash
+uv sync
+```
 
-AI & Orchestration
+### 4. Configure Environment Variables
 
-* LangChain: The core framework used to connect the LLM with external tools (Search, Weather, Calculator, etc.) and manage prompt templates.
+Create a .env file in the project root:
 
-* LangGraph: Handles the complex state management, routing, and streaming, allowing the application to pause, resume, and track conversational memory across multiple turns.
+```bash
+GROQ_API_KEY=your_groq_api_key_here
+```
 
-Database & State Management
+### 5. Running the Application
 
-* SQLite: A lightweight, local database used to persistently store chat histories and session data.
+Launch the Streamlit web application:
 
-* UUID: Generates unique session identifiers to separate and resume distinct chat threads.
-
-Utilities & Integrations
-
-* Requests: Handles external HTTP API calls to fetch live data (e.g., stock prices, weather).
-
-* Dotenv: Securely loads environment variables and API keys from a .env file.
-
-* Typing: Enforces strict Python type hints, improving code readability, maintainability, and debugging.
+```bash
+streamlit run app/frontend.py
+```
