@@ -5,8 +5,7 @@ from utils import reset_chat
 def render_sidebar(st, thread_key, thread_docs, threads):
     selected_thread = None
 
-    st.sidebar.title("LangGraph PDF Chatbot")
-    st.sidebar.markdown(f"**Thread ID:** `{thread_key}`")
+    st.sidebar.title("OmniRAG Chatbot")
 
     if st.sidebar.button("New Chat", use_container_width=True):
         reset_chat(st)

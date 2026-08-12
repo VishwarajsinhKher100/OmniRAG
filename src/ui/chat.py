@@ -5,8 +5,6 @@ from graph.helpers import thread_document_metadata
 
 
 def render_chat_interface(st, thread_key):
-    st.title("Multi Utility Chatbot")
-
     for message in st.session_state["message_history"]:
         with st.chat_message(message["role"]):
             st.text(message["content"])
@@ -68,5 +66,3 @@ def render_chat_interface(st, thread_key):
                 f"Document indexed: {doc_meta.get('filename')} "
                 f"(chunks: {doc_meta.get('chunks')}, pages: {doc_meta.get('documents')})"
             )
-
-    st.divider()
