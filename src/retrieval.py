@@ -1,8 +1,8 @@
 import os
 import tempfile
+import pymupdf
 from typing import Optional
-
-from langchain_community.document_loaders import PyPDFLoader
+from langchain_core.documents import Document
 from langchain_chroma import Chroma
 from langchain_text_splitters import RecursiveCharacterTextSplitter
 
@@ -25,13 +25,30 @@ def ingest_pdf(file_bytes: bytes, thread_id: str, filename: Optional[str] = None
         temp_path = temp_file.name
 
     try:
-        loader = PyPDFLoader(temp_path)
-        docs = loader.load()
+        pdf = pymupdf.open(temp_path)
+
+        documents = []
+
+        for page_number, page in enumerate(pdf):
+            text = page.get_text("text")
+
+            if text.strip():
+                documents.append(
+                    Document(
+                        page_content=text,
+                        metadata={
+                            "source": temp_path,
+                            "page": page_number + 1,
+                        },
+                    )
+                )
+
+        pdf.close()
 
         splitter = RecursiveCharacterTextSplitter(
             chunk_size=1000, chunk_overlap=200, separators=["\n\n", "\n", " ", ""]
         )
-        chunks = splitter.split_documents(docs)
+        chunks = splitter.split_documents(documents)
 
         vector_store = Chroma.from_documents(
             documents=chunks,
@@ -45,13 +62,13 @@ def ingest_pdf(file_bytes: bytes, thread_id: str, filename: Optional[str] = None
         _THREAD_RETRIEVERS[str(thread_id)] = retriever
         _THREAD_METADATA[str(thread_id)] = {
             "filename": filename or os.path.basename(temp_path),
-            "documents": len(docs),
+            "documents": len(documents),
             "chunks": len(chunks),
         }
 
         return {
             "filename": filename or os.path.basename(temp_path),
-            "documents": len(docs),
+            "documents": len(documents),
             "chunks": len(chunks),
         }
     finally:
