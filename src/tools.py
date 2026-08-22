@@ -7,6 +7,7 @@ from config import ALPHA_VANTAGE_API_KEY
 from retrieval import get_retriever
 from store import _THREAD_METADATA
 
+# Web search tool configured for lightweight results
 search_tool = TavilySearch(
     max_results=3,
     topic="general",         
@@ -19,6 +20,7 @@ search_tool = TavilySearch(
 def calculator(first_num: float, second_num: float, operation: str) -> dict:
     """Perform a basic arithmetic operation on two numbers."""
     try:
+        # Map operations to calculations and prevent division by zero
         ops = {
             "add": first_num + second_num,
             "sub": first_num - second_num,
@@ -43,6 +45,7 @@ def calculator(first_num: float, second_num: float, operation: str) -> dict:
 @tool
 def get_stock_price(symbol: str) -> dict:
     """Fetch latest stock price for a given symbol."""
+    # Query Alpha Vantage API for real-time stock quote data
     url = (
         "https://www.alphavantage.co/query"
         f"?function=GLOBAL_QUOTE&symbol={symbol}&apikey={ALPHA_VANTAGE_API_KEY}"
@@ -54,6 +57,7 @@ def get_stock_price(symbol: str) -> dict:
 @tool
 def rag_tool(query: str, thread_id: Optional[str] = None) -> dict:
     """Retrieve relevant information from the uploaded PDF for this chat thread."""
+    # Fetch thread-specific vector retriever and query matching PDF chunks
     retriever = get_retriever(thread_id)
     if retriever is None:
         return {
@@ -73,4 +77,5 @@ def rag_tool(query: str, thread_id: Optional[str] = None) -> dict:
     }
 
 
+# Tool registry for LLM agent binding
 tools = [search_tool, get_stock_price, calculator, rag_tool]

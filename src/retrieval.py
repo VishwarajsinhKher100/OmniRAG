@@ -11,20 +11,24 @@ from store import _THREAD_METADATA, _THREAD_RETRIEVERS
 
 
 def get_retriever(thread_id: Optional[str]):
+    """Fetch the cached Chroma retriever for a specific thread."""
     if thread_id and thread_id in _THREAD_RETRIEVERS:
         return _THREAD_RETRIEVERS[thread_id]
     return None
 
 
 def ingest_pdf(file_bytes: bytes, thread_id: str, filename: Optional[str] = None) -> dict:
+    """Extract text from a PDF, chunk it, index into ChromaDB, and cache thread retriever."""
     if not file_bytes:
         raise ValueError("No bytes received for ingestion.")
 
+    # Write raw bytes to a temporary PDF file for PyMuPDF extraction
     with tempfile.NamedTemporaryFile(delete=False, suffix=".pdf") as temp_file:
         temp_file.write(file_bytes)
         temp_path = temp_file.name
 
     try:
+        # Extract non-empty pages as LangChain Document objects
         pdf = pymupdf.open(temp_path)
         documents = []
 
@@ -39,11 +43,13 @@ def ingest_pdf(file_bytes: bytes, thread_id: str, filename: Optional[str] = None
                 )
         pdf.close()
 
+        # Split documents into overlapping chunks for embedding
         splitter = RecursiveCharacterTextSplitter(
             chunk_size=1000, chunk_overlap=200, separators=["\n\n", "\n", " ", ""]
         )
         chunks = splitter.split_documents(documents)
 
+        # Create thread-isolated Chroma collection and retriever
         vector_store = Chroma.from_documents(
             documents=chunks,
             embedding=embeddings,
@@ -53,6 +59,7 @@ def ingest_pdf(file_bytes: bytes, thread_id: str, filename: Optional[str] = None
             search_type="similarity", search_kwargs={"k": 4}
         )
 
+        # Store retriever and metadata in memory mapped by thread ID
         meta = {
             "filename": filename or os.path.basename(temp_path),
             "documents": len(documents),
@@ -63,6 +70,7 @@ def ingest_pdf(file_bytes: bytes, thread_id: str, filename: Optional[str] = None
 
         return meta
     finally:
+        # Clean up temporary disk file
         try:
             os.remove(temp_path)
         except OSError:
