@@ -1,13 +1,18 @@
 from typing import Optional
 import requests
-from langchain_community.tools import DuckDuckGoSearchRun
 from langchain_core.tools import tool
+from langchain_tavily import TavilySearch
 
 from config import ALPHA_VANTAGE_API_KEY
 from retrieval import get_retriever
 from store import _THREAD_METADATA
 
-search_tool = DuckDuckGoSearchRun(region="us-en")
+search_tool = TavilySearch(
+    max_results=3,
+    topic="general",         
+    search_depth="basic",     
+    include_raw_content=False
+)
 
 
 @tool
