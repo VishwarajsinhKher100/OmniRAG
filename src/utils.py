@@ -1,39 +1,39 @@
 import uuid
-from graph.builder import chatbot
+import streamlit as st
 
 
 def generate_thread_id():
-    return uuid.uuid4()
+    return str(uuid.uuid4())
 
 
-def reset_chat(st):
-    thread_id = generate_thread_id()
-    st.session_state["thread_id"] = thread_id
-    add_thread(st, thread_id)
-    st.session_state["message_history"] = []
-
-
-def add_thread(st, thread_id):
+def add_thread(thread_id):
     if thread_id not in st.session_state["chat_threads"]:
         st.session_state["chat_threads"].append(thread_id)
 
 
-def load_conversation(thread_id):
-    state = chatbot.get_state(config={"configurable": {"thread_id": thread_id}})
+def reset_chat():
+    thread_id = generate_thread_id()
+    st.session_state["thread_id"] = thread_id
+    add_thread(thread_id)
+    st.session_state["message_history"] = []
+
+
+def load_conversation(chatbot_instance, thread_id: str):
+    state = chatbot_instance.get_state(config={"configurable": {"thread_id": thread_id}})
     return state.values.get("messages", [])
 
 
-def init_session_state(st, retrieve_all_threads_fn):
+def init_session_state(retrieve_all_threads_fn):
     if "message_history" not in st.session_state:
         st.session_state["message_history"] = []
-
-    if "thread_id" not in st.session_state:
-        st.session_state["thread_id"] = generate_thread_id()
 
     if "chat_threads" not in st.session_state:
         st.session_state["chat_threads"] = retrieve_all_threads_fn()
 
+    if "thread_id" not in st.session_state:
+        st.session_state["thread_id"] = generate_thread_id()
+
     if "ingested_docs" not in st.session_state:
         st.session_state["ingested_docs"] = {}
 
-    add_thread(st, st.session_state["thread_id"])
+    add_thread(st.session_state["thread_id"])

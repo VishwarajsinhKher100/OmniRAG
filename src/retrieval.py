@@ -1,7 +1,7 @@
 import os
 import tempfile
-import pymupdf
 from typing import Optional
+import pymupdf
 from langchain_core.documents import Document
 from langchain_chroma import Chroma
 from langchain_text_splitters import RecursiveCharacterTextSplitter
@@ -10,7 +10,7 @@ from config import embeddings
 from store import _THREAD_METADATA, _THREAD_RETRIEVERS
 
 
-def _get_retriever(thread_id: Optional[str]):
+def get_retriever(thread_id: Optional[str]):
     if thread_id and thread_id in _THREAD_RETRIEVERS:
         return _THREAD_RETRIEVERS[thread_id]
     return None
@@ -26,23 +26,17 @@ def ingest_pdf(file_bytes: bytes, thread_id: str, filename: Optional[str] = None
 
     try:
         pdf = pymupdf.open(temp_path)
-
         documents = []
 
         for page_number, page in enumerate(pdf):
             text = page.get_text("text")
-
             if text.strip():
                 documents.append(
                     Document(
                         page_content=text,
-                        metadata={
-                            "source": temp_path,
-                            "page": page_number + 1,
-                        },
+                        metadata={"source": temp_path, "page": page_number + 1},
                     )
                 )
-
         pdf.close()
 
         splitter = RecursiveCharacterTextSplitter(
@@ -59,18 +53,15 @@ def ingest_pdf(file_bytes: bytes, thread_id: str, filename: Optional[str] = None
             search_type="similarity", search_kwargs={"k": 4}
         )
 
+        meta = {
+            "filename": filename or os.path.basename(temp_path),
+            "documents": len(documents),
+            "chunks": len(chunks),
+        }
         _THREAD_RETRIEVERS[str(thread_id)] = retriever
-        _THREAD_METADATA[str(thread_id)] = {
-            "filename": filename or os.path.basename(temp_path),
-            "documents": len(documents),
-            "chunks": len(chunks),
-        }
+        _THREAD_METADATA[str(thread_id)] = meta
 
-        return {
-            "filename": filename or os.path.basename(temp_path),
-            "documents": len(documents),
-            "chunks": len(chunks),
-        }
+        return meta
     finally:
         try:
             os.remove(temp_path)

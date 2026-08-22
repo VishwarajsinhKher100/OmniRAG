@@ -3,7 +3,8 @@ import requests
 from langchain_community.tools import DuckDuckGoSearchRun
 from langchain_core.tools import tool
 
-from retrieval import _get_retriever
+from config import ALPHA_VANTAGE_API_KEY
+from retrieval import get_retriever
 from store import _THREAD_METADATA
 
 search_tool = DuckDuckGoSearchRun(region="us-en")
@@ -13,24 +14,22 @@ search_tool = DuckDuckGoSearchRun(region="us-en")
 def calculator(first_num: float, second_num: float, operation: str) -> dict:
     """Perform a basic arithmetic operation on two numbers."""
     try:
-        if operation == "add":
-            result = first_num + second_num
-        elif operation == "sub":
-            result = first_num - second_num
-        elif operation == "mul":
-            result = first_num * second_num
-        elif operation == "div":
-            if second_num == 0:
-                return {"error": "Division by zero is not allowed"}
-            result = first_num / second_num
-        else:
+        ops = {
+            "add": first_num + second_num,
+            "sub": first_num - second_num,
+            "mul": first_num * second_num,
+            "div": first_num / second_num if second_num != 0 else None,
+        }
+        if operation == "div" and second_num == 0:
+            return {"error": "Division by zero is not allowed"}
+        if operation not in ops:
             return {"error": f"Unsupported operation '{operation}'"}
 
         return {
             "first_num": first_num,
             "second_num": second_num,
             "operation": operation,
-            "result": result,
+            "result": ops[operation],
         }
     except Exception as e:
         return {"error": str(e)}
@@ -41,16 +40,16 @@ def get_stock_price(symbol: str) -> dict:
     """Fetch latest stock price for a given symbol."""
     url = (
         "https://www.alphavantage.co/query"
-        f"?function=GLOBAL_QUOTE&symbol={symbol}&apikey=C9PE94QUEW9VWGFM"
+        f"?function=GLOBAL_QUOTE&symbol={symbol}&apikey={ALPHA_VANTAGE_API_KEY}"
     )
-    r = requests.get(url)
+    r = requests.get(url, timeout=10)
     return r.json()
 
 
 @tool
 def rag_tool(query: str, thread_id: Optional[str] = None) -> dict:
     """Retrieve relevant information from the uploaded PDF for this chat thread."""
-    retriever = _get_retriever(thread_id)
+    retriever = get_retriever(thread_id)
     if retriever is None:
         return {
             "error": "No document indexed for this chat. Upload a PDF first.",
