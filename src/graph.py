@@ -3,43 +3,28 @@ from langchain_core.messages import BaseMessage, SystemMessage
 from langgraph.graph import START, StateGraph
 from langgraph.graph.message import add_messages
 from langgraph.prebuilt import ToolNode, tools_condition
+from dotenv import load_dotenv
+from langchain_groq import ChatGroq
+import sqlite3
+from langgraph.checkpoint.sqlite import SqliteSaver
 
-from config import llm
-from database import checkpointer
-from store import _THREAD_METADATA, _THREAD_RETRIEVERS
+from retrieval import _THREAD_METADATA, _THREAD_RETRIEVERS
 from tools import tools
 
+load_dotenv()
+
+# Initialize LLM and embedding models
+llm = ChatGroq(model="openai/gpt-oss-120b")
 
 class ChatState(TypedDict):
-    # Appends incoming messages to conversation history
     messages: Annotated[list[BaseMessage], add_messages]
-
-
-def retrieve_all_threads():
-    """Extract all unique thread IDs from SQLite checkpoints."""
-    all_threads = set()
-    for checkpoint in checkpointer.list(None):
-        all_threads.add(checkpoint.config["configurable"]["thread_id"])
-    return list(all_threads)
-
-
-def thread_has_document(thread_id: str) -> bool:
-    """Check if a vector retriever is loaded for this thread."""
-    return str(thread_id) in _THREAD_RETRIEVERS
-
-
-def thread_document_metadata(thread_id: str) -> dict:
-    """Get metadata for the thread's uploaded document."""
-    return _THREAD_METADATA.get(str(thread_id), {})
-
 
 # Bind tool registry to LLM and create tool runner node
 llm_with_tools = llm.bind_tools(tools)
-tool_node = ToolNode(tools)
 
 
 def chat_node(state: ChatState, config=None):
-    """Inject thread-aware system prompt and generate model response."""
+    """LLM node that may answer or request a tool call."""
     thread_id = None
     if config and isinstance(config, dict):
         thread_id = config.get("configurable", {}).get("thread_id")
@@ -59,7 +44,11 @@ def chat_node(state: ChatState, config=None):
     return {"messages": [response]}
 
 
-# Define StateGraph workflow with cyclical tool calling
+tool_node = ToolNode(tools)
+
+conn = sqlite3.connect(database="chatbot.db", check_same_thread=False)
+checkpointer = SqliteSaver(conn=conn)
+
 graph = StateGraph(ChatState)
 graph.add_node("chat_node", chat_node)
 graph.add_node("tools", tool_node)
@@ -68,5 +57,19 @@ graph.add_edge(START, "chat_node")
 graph.add_conditional_edges("chat_node", tools_condition)
 graph.add_edge("tools", "chat_node")
 
-# Compile graph with persistent SQLite state checkpointer
 chatbot = graph.compile(checkpointer=checkpointer)
+
+# Helpers
+def retrieve_all_threads():
+    all_threads = set()
+    for checkpoint in checkpointer.list(None):
+        all_threads.add(checkpoint.config["configurable"]["thread_id"])
+    return list(all_threads)
+
+
+def thread_has_document(thread_id: str) -> bool:
+    return str(thread_id) in _THREAD_RETRIEVERS
+
+
+def thread_document_metadata(thread_id: str) -> dict:
+    return _THREAD_METADATA.get(str(thread_id), {})

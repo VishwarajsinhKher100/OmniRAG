@@ -1,14 +1,21 @@
 import os
 import tempfile
-from typing import Optional
+from typing import Any, Optional, Dict
 import pymupdf
 from langchain_core.documents import Document
 from langchain_chroma import Chroma
 from langchain_text_splitters import RecursiveCharacterTextSplitter
+from dotenv import load_dotenv
+from langchain_huggingface import HuggingFaceEmbeddings
 
-from config import embeddings
-from store import _THREAD_METADATA, _THREAD_RETRIEVERS
 
+load_dotenv()
+
+_THREAD_RETRIEVERS: Dict[str, Any] = {}
+_THREAD_METADATA: Dict[str, dict] = {}
+
+# Initialize LLM and embedding models
+embeddings = HuggingFaceEmbeddings(model_name="all-MiniLM-L6-v2")
 
 def get_retriever(thread_id: Optional[str]):
     """Fetch the cached Chroma retriever for a specific thread."""

@@ -1,11 +1,15 @@
+from dotenv import load_dotenv
 from typing import Optional
 import requests
+import os
 from langchain_core.tools import tool
 from langchain_tavily import TavilySearch
 
-from config import ALPHA_VANTAGE_API_KEY
-from retrieval import get_retriever
-from store import _THREAD_METADATA
+from retrieval import get_retriever, _THREAD_METADATA
+
+
+# Load API keys from .env
+load_dotenv()
 
 # Web search tool configured for lightweight results
 search_tool = TavilySearch(
@@ -45,13 +49,27 @@ def calculator(first_num: float, second_num: float, operation: str) -> dict:
 @tool
 def get_stock_price(symbol: str) -> dict:
     """Fetch latest stock price for a given symbol."""
-    # Query Alpha Vantage API for real-time stock quote data
+    api_key = os.getenv("ALPHA_VANTAGE_API_KEY")
+    if not api_key:
+        return {"error": "Alpha Vantage API key not found in environment"}
+    
     url = (
         "https://www.alphavantage.co/query"
-        f"?function=GLOBAL_QUOTE&symbol={symbol}&apikey={ALPHA_VANTAGE_API_KEY}"
+      f"?function=GLOBAL_QUOTE&symbol={symbol}&apikey={api_key}"
     )
-    r = requests.get(url, timeout=10)
-    return r.json()
+    try:
+        r = requests.get(url, timeout=10)
+        data = r.json()
+
+        # Alpha Vantage returns an error message/note if the key or limit is invalid
+        if "Error Message" in data:
+            return {"error": data["Error Message"]}
+        if "Information" in data or "Note" in data:
+            return {"error": "API call frequency limit reached", "details": data}
+
+        return data
+    except requests.RequestException as e:
+        return {"error": f"Request failed: {str(e)}"}
 
 
 @tool
